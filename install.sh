@@ -20,6 +20,7 @@ then
     git clone https://github.com/kcanderson/promising_helper.git
     cd promising_helper
     ../lein uberjar
+    cd ..
 fi
 
 # Grab large files from GitHub release
