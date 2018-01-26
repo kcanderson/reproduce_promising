@@ -2,12 +2,12 @@
 # Don't remove intermediary files
 ANNOTATIONS_DIR := annotations
 ANNOTATIONS := $(shell ls $(ANNOTATIONS_DIR)/*.gtf)
-UBERJAR := dependencies/promising_paper/target/promising_paper-0.1.0-SNAPSHOT-standalone.jar
+DEP_DIR := dependencies
+HELPER_DIR := $(DEP_DIR)/promising_helper
+UBERJAR := $(shell ls $(HELPER_DIR)/target/*-standalone.jar)
 BASE_CMD := java -jar $(UBERJAR)
 
 SSNPS_DIR := snps_source
-SNET_DIR := source_networks
-DNET_DIR := derived_networks
 
 # SNPs
 SSNPS := $(shell ls -1 $(SSNPS_DIR)/*.tsv)
@@ -36,7 +36,9 @@ $(GENESETS_DIR)/%.gmt: $(DSNPS_DIR)/%.txt
 genesets: $(CASES:%=$(GENESETS_DIR)/%.gmt)
 
 # Derived networks
-DNET_CMD := java -jar $(UBERJAR) network
+SNET_DIR := networks_source
+DNET_DIR := networks_derived
+DNET_CMD := $(BASE_CMD) network
 STRING_NET := $(DNET_DIR)/string.tsv
 STRING_NOTM_NET := $(DNET_DIR)/string_notm.tsv
 PF_NET := $(DNET_DIR)/pf.tsv
@@ -96,7 +98,7 @@ $(PF_RESULTS_DIR)/pf/%.tsv: $(GENESETS_DIR)/%.gmt
 
 pf_results: $(CASES:%=$(PF_RESULTS_DIR)/string/%.tsv) $(CASES:%=$(PF_RESULTS_DIR)/string_notm/%.tsv) $(CASES:%=$(PF_RESULTS_DIR)/pf/%.tsv)
 
-results: kernel promising_results pf_results
+results: kernels promising_results pf_results
 
 # MONARCH known genes
 SMONARCH_DIR := monarch_source
