@@ -54,3 +54,6 @@ if [[ ! -f ${PF_LOCAL_PATH} ]]
 then
     curl -L ${GITHUB_RELEASE_URL}/${PF_FILENAME} > ${PF_LOCAL_PATH}
 fi
+
+# Install R packages
+Rscript ../install_r_packages.r
