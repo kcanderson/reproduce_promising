@@ -1,5 +1,4 @@
 
-# Don't remove intermediary files
 ANNOTATIONS_DIR := annotations
 ANNOTATIONS := $(shell ls $(ANNOTATIONS_DIR)/*.gtf)
 DEP_DIR := dependencies
@@ -52,7 +51,7 @@ $(STRING_NOTM_NET): $(SNET_DIR)/9606.protein.links.detailed.v10.txt
 $(PF_NET): $(SNET_DIR)/main_FAN.csv
 	$(DNET_CMD) -t pf -a $(ANNOTATIONS) -i $< -o $@
 
-derived_networks: $(DNET_DIR)/string_notm.tsv $(DNET_DIR)/string.tsv $(DNET_DIR)/pf.tsv
+networks: $(DNET_DIR)/string_notm.tsv $(DNET_DIR)/string.tsv $(DNET_DIR)/pf.tsv
 
 # Kernels
 KERNEL_DIR := kernels
@@ -63,38 +62,69 @@ ALPHA := 0.001
 $(KERNEL_DIR)/%_reglap.mat: $(DNET_DIR)/%.tsv
 	$(KERNEL_CMD) -a $(ALPHA) -i $< -o $@
 
-kernels: $(DNETS:$(DNET_DIR)/%.tsv=$(KERNEL_DIR)/%_reglap.mat)
+kernels: networks $(DNETS:$(DNET_DIR)/%.tsv=$(KERNEL_DIR)/%_reglap.mat)
 
 # Results
 ## PROMISING
 RESULTS_DIR := results
 P_RESULTS_DIR := $(RESULTS_DIR)/promising
-PVAL_ITERATIONS := 5000
+PVAL_ITERATIONS := 10000
 PROMISING_CMD := dependencies/PROMISING/src/promising -p $(PVAL_ITERATIONS)
 
-$(P_RESULTS_DIR)/string/%.tsv: $(GENESETS_DIR)/%.gmt
-	$(PROMISING_CMD) -m $(KERNEL_DIR)/string_reglap.mat -g $< -o $@
+$(P_RESULTS_DIR):
+	mkdir -p $(P_RESULTS_DIR)
 
-$(P_RESULTS_DIR)/string_notm/%.tsv: $(GENESETS_DIR)/%.gmt
-	$(PROMISING_CMD) -m $(KERNEL_DIR)/string_notm_reglap.mat -g $< -o $@
+MAT_FILES := $(wildcard $(KERNEL_DIR)/*.mat)
+KERNELS := $(MAT_FILES:$(KERNEL_DIR)/%.mat=%)
+GENESET_FILES := $(wildcard $(GENESETS_DIR)/*.gmt)
+GENESETS := $(GENESET_FILES:$(GENESETS_DIR)/%=%)
+#KERNEL_MATS := $(KERNELS:%_
+PROMISING := promising
 
-$(P_RESULTS_DIR)/pf/%.tsv: $(GENESETS_DIR)/%.gmt
-	$(PROMISING_CMD) -m $(KERNEL_DIR)/pf_reglap.mat -g $< -o $@
+foobar/%: 
+	@echo whoa $@ $(@D:foobar/%=%)
 
-promising_results: $(CASES:%=$(P_RESULTS_DIR)/string/%.tsv) $(CASES:%=$(P_RESULTS_DIR)/string_notm/%.tsv) $(CASES:%=$(P_RESULTS_DIR)/pf/%.tsv)
+$(RESULTS_DIR)/$(PROMISING)/%.tsv:
+	echo $(@D) $(@F)
+
+foo: $(foreach k, $(KERNELS), $(foreach g, $(GENESETS), $(RESULTS_DIR)/$(PROMISING)/$(g:%.gmt=%)_$(k).tsv))
+	@echo $(GENESETS)
+	@echo $(foreach k, $(KERNELS), $(foreach g, $(GENESETS), $(RESULTS_DIR)/$(PROMISING)/$(g:%.gmt=%)_$(k).tsv))
+
+##promising_results: $(foreach c, $(CASES), foreach k
+
+# $(P_RESULTS_DIR)/string/%.tsv: $(P_RESULTS_DIR) $(GENESETS_DIR)/%.gmt
+# 	mkdir -p $(@D)
+# 	$(PROMISING_CMD) -m $(KERNEL_DIR)/string_reglap.mat -g $(word 2,$^) -o $@
+
+# $(P_RESULTS_DIR)/string_notm/%.tsv: $(P_RESULTS_DIR) $(GENESETS_DIR)/%.gmt
+# 	mkdir -p $(@D)
+# 	$(PROMISING_CMD) -m $(KERNEL_DIR)/string_notm_reglap.mat -g $(word 2,$^) -o $@
+
+# $(P_RESULTS_DIR)/pf/%.tsv: $(P_RESULTS_DIR) $(GENESETS_DIR)/%.gmt
+# 	mkdir -p $(@D)
+# 	$(PROMISING_CMD) -m $(KERNEL_DIR)/pf_reglap.mat -g $(word 2,$^) -o $@
+
+# promising_results: $(CASES:%=$(P_RESULTS_DIR)/string/%.tsv) $(CASES:%=$(P_RESULTS_DIR)/string_notm/%.tsv) $(CASES:%=$(P_RESULTS_DIR)/pf/%.tsv)
 
 ## PF
 PF_RESULTS_DIR := results/pf
 PF_CMD := Rscript dependencies/prix_fixe/run_pf.r
 
-$(PF_RESULTS_DIR)/string/%.tsv: $(GENESETS_DIR)/%.gmt
-	$(PF_CMD) $< $(STRING_NET) $@
+$(PF_RESULTS_DIR):
+	mkdir -p $(PF_RESULTS_DIR)
 
-$(PF_RESULTS_DIR)/string_notm/%.tsv: $(GENESETS_DIR)/%.gmt
-	$(PF_CMD) $< $(STRING_NOTM_NET) $@
+$(PF_RESULTS_DIR)/string/%.tsv: $(PF_RESULTS_DIR) $(GENESETS_DIR)/%.gmt
+	mkdir -p $(@D)
+	$(PF_CMD) $(word 2,$^) $(STRING_NET) $@
 
-$(PF_RESULTS_DIR)/pf/%.tsv: $(GENESETS_DIR)/%.gmt
-	$(PF_CMD) $< $(PF_NET) $@
+$(PF_RESULTS_DIR)/string_notm/%.tsv: $(PF_RESULTS_DIR) $(GENESETS_DIR)/%.gmt
+	mkdir -p $(@D)
+	$(PF_CMD) $(word 2,$^) $(STRING_NOTM_NET) $@
+
+$(PF_RESULTS_DIR)/pf/%.tsv: $(PF_RESULTS_DIR) $(GENESETS_DIR)/%.gmt
+	mkdir -p $(@D)
+	$(PF_CMD) $(word 2,$^) $(PF_NET) $@
 
 pf_results: $(CASES:%=$(PF_RESULTS_DIR)/string/%.tsv) $(CASES:%=$(PF_RESULTS_DIR)/string_notm/%.tsv) $(CASES:%=$(PF_RESULTS_DIR)/pf/%.tsv)
 
@@ -117,7 +147,7 @@ VALIDATION_CMD := java -jar $(UBERJAR) validate
 VALIDATION_DIR := validation
 VALIDATION_FILENAME := validation.tsv
 VALIDATION_FILEPATH := $(VALIDATION_DIR)/$(VALIDATION_FILENAME)
-PVAL_ITERATIONS_VAL := 1000
+PVAL_ITERATIONS_VAL := 5000
 
 $(VALIDATION_FILEPATH): $(RESULTS_DIR)/*/*/*.tsv
 	$(VALIDATION_CMD) -r $(RESULTS_DIR) -t $(DMONARCH_DIR) -o $@ -p $(PVAL_ITERATIONS_VAL)
