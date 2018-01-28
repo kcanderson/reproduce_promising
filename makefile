@@ -98,17 +98,16 @@ promising_results: genesets kernels $(foreach k, $(KERNELS), $(foreach g, $(GENE
 PF_RESULTS_DIR := $(RESULTS_DIR)/pf
 PF_CMD := Rscript $(DEP_DIR)/prix_fixe/run_pf.r
 NETWORK_PATHS := $(wildcard $(DNET_DIR)/*.tsv)
-NETWORKS := $(NETWORK_PATHS:$(DNET_DIR)/%.tsv)
+NETWORKS := $(NETWORK_PATHS:$(DNET_DIR)/%.tsv=%)
 
 $(PF_RESULTS_DIR):
 	mkdir -p $(PF_RESULTS_DIR)
 
-$(PF_RESULTS_DIR)/%.tsv: genesets $(PF_RESULTS_DIR)
+$(PF_RESULTS_DIR)/%.tsv: $(PF_RESULTS_DIR)
 	mkdir -p $(@D)
-	@echo $@
-	@echo $(PF_CMD) 
+	$(PF_CMD) $(GENESETS_DIR)/$(word 1,$(subst _, ,$(@F))).gmt $(DNET_DIR)/$(shell echo $(@F:%.tsv=%) | sed "s/^[^_]*_//g").tsv $@
 
-pf_results: genesets networks $(foreach n, $(NETWORKS), $(foreach g, $(GENESETS), $(PF_RESULTS_DIR)/$(g:%.gmt=%)_$(g).tsv))
+pf_results: genesets networks $(foreach n, $(NETWORKS), $(foreach g, $(GENESETS), $(PF_RESULTS_DIR)/$(g:%.gmt=%)_$(n).tsv))
 
 # $(PF_RESULTS_DIR)/string/%.tsv: $(PF_RESULTS_DIR) $(GENESETS_DIR)/%.gmt
 # 	mkdir -p $(@D)
