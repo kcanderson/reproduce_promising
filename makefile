@@ -12,6 +12,8 @@ SNP_CASES := $(patsubst $(SSNPS_DIR)/%.tsv,%,$(wildcard $(SSNPS_DIR)/*.tsv))
 
 all: validation
 
+clean: clean_snps clean_gsets
+
 # Dependencies
 $(UBERJAR) $(PROMSING_BIN) $(ANNOTATIONS):
 	bash install.sh
@@ -27,7 +29,10 @@ $(SSNPS_DIR)/%_traits.txt: $(SSNPS_DIR)/%.tsv $(UBERJAR)
 $(DSNPS_DIR)/%.txt: $(SSNPS_DIR)/%_traits.txt $(SSNPS_DIR)/%.tsv $(UBERJAR)
 	$(SNPS_CMD) -t $< -i $(@:$(DSNPS_DIR)/%.txt=$(SSNPS_DIR)/%.tsv) -o $@
 
-snps: $(SSNPS:%.tsv=%_traits.txt) $(SSNPS:$(SSNPS_DIR)/%.tsv=$(DSNPS_DIR)/%.txt)
+snps: $(SNP_CASES:%=$(SSNPS_DIR)/%_traits.txt) $(SNP_CASES:%=$(DSNPS_DIR)/%.txt)
+
+clean_snps:
+	@rm $(SNP_CASES:%=$(SSNPS_DIR)/%_traits.txt) $(SNP_CASES:%=$(DSNPS_DIR)/%.txt)
 
 # Genesets
 GENESETS_DIR := genesets
@@ -38,6 +43,9 @@ $(GENESETS_DIR)/%.gmt: $(DSNPS_DIR)/%.txt $(UBERJAR)
 	$(GENESETS_CMD) -i $< -o $@ -f $(FLANK)
 
 gsets: $(SNP_CASES:%=$(GENESETS_DIR)/%.gmt)
+
+clean_gsets:
+	@rm $(SNP_CASES:%=$(GENESETS_DIR)/%.gmt)
 
 # Derived networks
 SNET_DIR := networks_source
