@@ -90,8 +90,7 @@ ALL_CASES := $(sort $(ALL_CASES))
 RESULTS_DIR := results
 PROMISING := promising
 P_RESULTS_DIR := $(RESULTS_DIR)/$(PROMISING)
-PVAL_ITERATIONS := 10000
-#KERNELS := $(MAT_FILES:$(KERNEL_DIR)/%.mat=%)
+PVAL_ITERATIONS := 50000
 KERNELS = $(NETWORKS:%=%_reglap)
 PROMISING_CMD := $(PROMISING_BIN) -p $(PVAL_ITERATIONS)
 
@@ -121,7 +120,7 @@ $(PF_RESULTS_DIR)/%.tsv: $(PF_RESULTS_DIR) $(GENESETS_DIR)/$$(word 1,$$(subst _,
 
 pf_results: $$(foreach n, $$(NETWORKS), $$(foreach c, $$(ALL_CASES), $(PF_RESULTS_DIR)/$$(c)_$$(n).tsv))
 
-results: promising_results pf_results
+all_results: promising_results pf_results
 
 # MONARCH known genes
 SMONARCH_DIR := monarch_source
