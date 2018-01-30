@@ -57,7 +57,7 @@ PF_NET := $(DNET_DIR)/pf-cfn.tsv
 NETWORK_PATHS := $(STRING_NET) $(STRINGNOTM_NET) $(PF_NET)
 NETWORK_CASES := $(NETWORK_PATHS:$(DNET_DIR)/%.tsv=%)
 
-$(STRING_NET): $(SNET_DIR)/9606.protein.links.detailed.v10.txt $(UBERJAR) $(ANNOTAIONS)
+$(STRING_NET): $(SNET_DIR)/9606.protein.links.detailed.v10.txt $(UBERJAR) $(ANNOTATIONS)
 	$(DNET_CMD) -t string -m -s 0.15 -a $(ANNOTATIONS) -i $< -o $@
 
 $(STRINGNOTM_NET): $(SNET_DIR)/9606.protein.links.detailed.v10.txt $(UBERJAR) $(ANNOTATIONS)
@@ -134,8 +134,8 @@ promising_results: $$(foreach n, $$(NETWORKS), $$(foreach c, $$(ALL_CASES), $(RE
 ## PF
 PF := pf
 PF_CMD := Rscript $(DEP_DIR)/prix_fixe/run_pf.r
-NETWORK_PATHS := $(wildcard $(DNET_DIR)/*.tsv)
-NETWORKS := $(NETWORK_PATHS:$(DNET_DIR)/%.tsv=%)
+#NETWORK_PATHS := $(wildcard $(DNET_DIR)/*.tsv)
+#NETWORKS := $(NETWORK_PATHS:$(DNET_DIR)/%.tsv=%)
 
 $(RESULTS_DIR)/%/$(PF): $(RESULTS_DIR)/%
 	mkdir -p $@
@@ -150,7 +150,7 @@ $(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PF)/%.tsv): $(DNET_DIR)/$$(subst 
 # 	mkdir -p $(@D)
 # 	$(PF_CMD) $(word 2,$^) $(word 3,$^) $@
 
-pf_results: $$(foreach n, $$(NETWORKS), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$$(c)/$(PF)/$$(c)_pf_$$(n).tsv))
+pf_results: $$(foreach n, $$(NETWORK_CASES), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$$(c)/$(PF)/$$(c)_pf_$$(n).tsv))
 
 all_results: promising_results pf_results
 
