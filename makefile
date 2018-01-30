@@ -10,7 +10,7 @@ SSNPS_DIR := snps_source
 SNP_CASES := $(patsubst $(SSNPS_DIR)/%.tsv,%,$(wildcard $(SSNPS_DIR)/*.tsv))
 .SECONDARY:
 
-all: validation
+all: all_validation
 
 clean: clean_snps clean_gsets
 
@@ -135,15 +135,35 @@ $(DMONARCH_DIR)/%.txt: $(SMONARCH_DIR)/%.tsv $(UBERJAR)
 monarch: $(MCASES:%=$(DMONARCH_DIR)/%.txt)
 
 # Validation
-VALIDATION_CMD := java -jar $(UBERJAR) validate
+PVAL_ITERATIONS_VAL := 10000
+VALIDATION_CMD := java -jar $(UBERJAR) validate -p $(PVAL_ITERATIONS_VAL)
 VALIDATION_DIR := validation
-VALIDATION_FILENAME := validation.tsv
-VALIDATION_FILEPATH := $(VALIDATION_DIR)/$(VALIDATION_FILENAME)
-PVAL_ITERATIONS_VAL := 5000
 
-$(VALIDATION_FILEPATH): $(wildcard $(RESULTS_DIR)/*/*/*.tsv)
-	$(VALIDATION_CMD) -r $(RESULTS_DIR) -t $(DMONARCH_DIR) -o $@ -p $(PVAL_ITERATIONS_VAL)
 
-validation: monarch results $(VALIDATION_FILEPATH)
+##$(VALIDATION_FILEPATH): $(wildcard $(RESULTS_DIR)/*.tsv)
+##	$(VALIDATION_CMD) -r $(RESULTS_DIR) -t $(DMONARCH_DIR) -o $@ -p $(PVAL_ITERATIONS_VAL)
 
-# Validation: GSEA curves
+##validation: monarch results $(VALIDATION_FILEPATH)
+
+RESULTS = $(shell find $(RESULTS_DIR) -iname "*.tsv")
+
+$(VALIDATION_DIR)/%.txt: $(RESULTS_DIR)/%.tsv $(DMONARCH_DIR)/$$(word 1,$$(subst _, ,$$(@F))).txt $(UBERJAR)
+	mkdir -p $(@D)
+	$(VALIDATION_CMD) -r $< -t $(word 2,$^) -o $@
+
+all_validation: $(RESULTS:$(RESULTS_DIR)/%.tsv=$(VALIDATION_DIR)/%.txt)
+
+ENRICHMENT_DIR := enrichment_figures
+ENRICHMENT_CMD := $(BASE_CMD) 
+
+$(VALIDATION_DIR)/%.png: $(VALIDATION_DIR)/%.txt
+	@
+
+touch_everything:
+	touch snps_source/*_traits.txt
+	touch snps_derived/*.txt
+	touch genesets/*.gmt
+	touch networks_derived/*.tsv
+	touch kernels/*.mat
+	touch results/*/*.tsv
+	touch monarch_derived/*.txt
