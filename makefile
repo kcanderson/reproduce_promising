@@ -91,7 +91,12 @@ $(PF_KERNEL): $(PF_NET) $(UBERJAR)
 	$(KERNEL_CMD) -a $(ALPHA_PF) -i $< -o $@
 
 
-kernels: $(NETWORK_CASES:%=$(KERNEL_DIR)/%_reglap.mat)
+foo:
+	@echo $(STRINGNOTM_KERNEL)
+	@echo $(STRINGNOTM_NET)
+	@echo $(NETWORK_CASES:%=$(KERNEL_DIR)/%_reglap.mat)
+
+all_kernels: $(NETWORK_CASES:%=$(KERNEL_DIR)/%_reglap.mat)
 #kernels: $(DNETS:$(DNET_DIR)/%.tsv=$(KERNEL_DIR)/%_reglap.mat)
 
 # Results
