@@ -54,7 +54,8 @@ DNET_CMD := $(BASE_CMD) network
 STRING_NET := $(DNET_DIR)/string.tsv
 STRINGNOTM_NET := $(DNET_DIR)/stringnotm.tsv
 PF_NET := $(DNET_DIR)/pf-cfn.tsv
-NETWORK_CASES = stringnotm string pf-cfn
+NETWORK_PATHS := $(STRING_NET) $(STRINGNOTM_NET) $(PF_NET)
+NETWORK_CASES := $(NETWORK_PATHS:$(DNET_DIR)/%.tsv=%)
 
 $(STRING_NET): $(SNET_DIR)/9606.protein.links.detailed.v10.txt $(UBERJAR) $(ANNOTAIONS)
 	$(DNET_CMD) -t string -m -s 0.15 -a $(ANNOTATIONS) -i $< -o $@
@@ -65,7 +66,7 @@ $(STRINGNOTM_NET): $(SNET_DIR)/9606.protein.links.detailed.v10.txt $(UBERJAR) $(
 $(PF_NET): $(SNET_DIR)/main_FAN.csv $(UBERJAR) $(ANNOTATIONS)
 	$(DNET_CMD) -t pf -a $(ANNOTATIONS) -i $< -o $@
 
-networks: $(NETWORK_CASES:%=$(DNET_DIR)/%.tsv)
+networks: $(NETWORK_PATHS)
 #networks: $(DNET_DIR)/stringnotm.tsv $(DNET_DIR)/string.tsv $(DNET_DIR)/pf.tsv
 
 clean_networks:
@@ -78,15 +79,15 @@ ALPHA_PF := 0.001
 ALPHA_STRING := 0.01
 STRING_KERNEL := $(KERNEL_DIR)/string_reglap.mat
 STRINGNOTM_KERNEL := $(KERNEL_DIR)/stringnotm_reglap.mat
-PF_KERNEL := $(KERNEL_DIR)/pf-cn_reglap.mat
+PF_KERNEL := $(KERNEL_DIR)/pf-cfn_reglap.mat
 
-$(STRING_KERNEL): $(DNET_DIR)/string.tsv $(UBERJAR)
+$(STRING_KERNEL): $(STRING_NET) $(UBERJAR)
 	$(KERNEL_CMD) -a $(ALPHA_STRING) -i $< -o $@
 
-$(STRINGNOTM_KERNEL): $(DNET_DIR)/stringnotm.tsv $(UBERJAR)
+$(STRINGNOTM_KERNEL): $(STRINGNOTM_NET) $(UBERJAR)
 	$(KERNEL_CMD) -a $(ALPHA_STRING) -i $< -o $@
 
-$(PF_KERNEL): $(DNET_DIR)/pf-cfn.tsv $(UBERJAR)
+$(PF_KERNEL): $(PF_NET) $(UBERJAR)
 	$(KERNEL_CMD) -a $(ALPHA_PF) -i $< -o $@
 
 
