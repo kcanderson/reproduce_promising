@@ -19,3 +19,6 @@ Downloaded 2018-01-30
 
 hdl.tsv: NHGRI GWAS catalog search for "hdl cholesterol".
 Downloaded 2018-01-30
+
+ldl.tsv: hdl.tsv: NHGRI GWAS catalog search for "ldl cholesterol".
+Downloaded 2018-01-30
