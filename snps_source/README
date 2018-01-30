@@ -9,4 +9,7 @@ ra.tsv: NHGRI GWAS catalog search for "rheumatoid arthritis".
 Downloaded 2018-01-25
 
 cd.tsv: NHGRI GWAS catalog search for "crohn's disease".
-Downloads 2018-01-25
+Downloaded 2018-01-25
+
+vgo.tsv: NHGRI GWAS catalog search for "vitiligo".
+Downloaded 2018-01-30
