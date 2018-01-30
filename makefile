@@ -32,7 +32,7 @@ $(DSNPS_DIR)/%.txt: $(SSNPS_DIR)/%_traits.txt $(SSNPS_DIR)/%.tsv $(UBERJAR)
 snps: $(SNP_CASES:%=$(SSNPS_DIR)/%_traits.txt) $(SNP_CASES:%=$(DSNPS_DIR)/%.txt)
 
 clean_snps:
-	@rm $(SNP_CASES:%=$(SSNPS_DIR)/%_traits.txt) $(SNP_CASES:%=$(DSNPS_DIR)/%.txt)
+	rm $(SNP_CASES:%=$(SSNPS_DIR)/%_traits.txt) $(SNP_CASES:%=$(DSNPS_DIR)/%.txt)
 
 # Genesets
 GENESETS_DIR := genesets
@@ -45,7 +45,7 @@ $(GENESETS_DIR)/%.gmt: $(DSNPS_DIR)/%.txt $(UBERJAR)
 gsets: $(SNP_CASES:%=$(GENESETS_DIR)/%.gmt)
 
 clean_gsets:
-	@rm $(SNP_CASES:%=$(GENESETS_DIR)/%.gmt)
+	rm $(SNP_CASES:%=$(GENESETS_DIR)/%.gmt)
 
 # Derived networks
 SNET_DIR := networks_source
@@ -53,10 +53,11 @@ DNET_DIR := networks_derived
 DNET_CMD := $(BASE_CMD) network
 STRING_NET := $(DNET_DIR)/string.tsv
 STRINGNOTM_NET := $(DNET_DIR)/stringnotm.tsv
-PF_NET := $(DNET_DIR)/pf.tsv
-NETWORK_CASES = stringnotm string pf
+PF_NET := $(DNET_DIR)/pf-cfn.tsv
+NETWORK_PATHS := $(STRING_NET) $(STRINGNOTM_NET) $(PF_NET)
+NETWORK_CASES := $(NETWORK_PATHS:$(DNET_DIR)/%.tsv=%)
 
-$(STRING_NET): $(SNET_DIR)/9606.protein.links.detailed.v10.txt $(UBERJAR) $(ANNOTAIONS)
+$(STRING_NET): $(SNET_DIR)/9606.protein.links.detailed.v10.txt $(UBERJAR) $(ANNOTATIONS)
 	$(DNET_CMD) -t string -m -s 0.15 -a $(ANNOTATIONS) -i $< -o $@
 
 $(STRINGNOTM_NET): $(SNET_DIR)/9606.protein.links.detailed.v10.txt $(UBERJAR) $(ANNOTATIONS)
@@ -65,20 +66,37 @@ $(STRINGNOTM_NET): $(SNET_DIR)/9606.protein.links.detailed.v10.txt $(UBERJAR) $(
 $(PF_NET): $(SNET_DIR)/main_FAN.csv $(UBERJAR) $(ANNOTATIONS)
 	$(DNET_CMD) -t pf -a $(ANNOTATIONS) -i $< -o $@
 
-networks: $(NETWORK_CASES:%=$(DNET_DIR)/%.tsv)
+networks: $(NETWORK_PATHS)
 #networks: $(DNET_DIR)/stringnotm.tsv $(DNET_DIR)/string.tsv $(DNET_DIR)/pf.tsv
+
+clean_networks:
+	rm $(DNET_DIR)/*.tsv
 
 # Kernels
 KERNEL_DIR := kernels
-#DNETS := $(shell ls $(DNET_DIR)/*.tsv)
-#DNETS := $(wildcard $(DNET_DIR)/*.tsv)
 KERNEL_CMD := java -Xmx24g -jar $(UBERJAR) kernel
-ALPHA := 0.001
+ALPHA_PF := 0.001
+ALPHA_STRING := 0.01
+STRING_KERNEL := $(KERNEL_DIR)/string_reglap.mat
+STRINGNOTM_KERNEL := $(KERNEL_DIR)/stringnotm_reglap.mat
+PF_KERNEL := $(KERNEL_DIR)/pf-cfn_reglap.mat
 
-$(KERNEL_DIR)/%_reglap.mat: $(DNET_DIR)/%.tsv $(UBERJAR)
-	$(KERNEL_CMD) -a $(ALPHA) -i $< -o $@
+$(STRING_KERNEL): $(STRING_NET) $(UBERJAR)
+	$(KERNEL_CMD) -a $(ALPHA_STRING) -i $< -o $@
 
-kernels: $(NETWORK_CASES:%=$(KERNEL_DIR)/%_reglap.mat)
+$(STRINGNOTM_KERNEL): $(STRINGNOTM_NET) $(UBERJAR)
+	$(KERNEL_CMD) -a $(ALPHA_STRING) -i $< -o $@
+
+$(PF_KERNEL): $(PF_NET) $(UBERJAR)
+	$(KERNEL_CMD) -a $(ALPHA_PF) -i $< -o $@
+
+
+foo:
+	@echo $(STRINGNOTM_KERNEL)
+	@echo $(STRINGNOTM_NET)
+	@echo $(NETWORK_CASES:%=$(KERNEL_DIR)/%_reglap.mat)
+
+all_kernels: $(NETWORK_CASES:%=$(KERNEL_DIR)/%_reglap.mat)
 #kernels: $(DNETS:$(DNET_DIR)/%.tsv=$(KERNEL_DIR)/%_reglap.mat)
 
 # Results
@@ -89,36 +107,55 @@ ALL_CASES := $(sort $(ALL_CASES))
 ## PROMISING
 RESULTS_DIR := results
 PROMISING := promising
-P_RESULTS_DIR := $(RESULTS_DIR)/$(PROMISING)
-PVAL_ITERATIONS := 50000
+#P_RESULTS_DIR := $(RESULTS_DIR)/$(PROMISING)
+PVAL_ITERATIONS := 10000
 KERNELS = $(NETWORKS:%=%_reglap)
 PROMISING_CMD := $(PROMISING_BIN) -p $(PVAL_ITERATIONS)
 
-$(P_RESULTS_DIR):
-	mkdir -p $(RESULTS_DIR)/$(PROMISING)
+# $(P_RESULTS_DIR):
+# 	mkdir -p $(RESULTS_DIR)/$(PROMISING)
 
+# $(P_RESULTS_DIR)/%.tsv: $(PROMISING_BIN) $(P_RESULTS_DIR) $(KERNEL_DIR)/$$(shell echo $$(subst .tsv,,$$(@F)) | sed 's/^[^_]*_//g').mat $(GENESETS_DIR)/$$(word 1,$$(subst _, ,$$(@F))).gmt
+# 	mkdir -p $(@D)
+# 	$(PROMISING_CMD) -m $(word 3,$^) -g $(word 4,$^) -o $@
+
+# promising_results: $$(foreach k, $$(KERNELS), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$(PROMISING)/$$(c)_$$(k).tsv))
+
+$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)):
+	mkdir -p $@
+
+$(RESULTS_DIR)/%/$(PROMISING): $(RESULTS_DIR)/%
+	mkdir -p $@
+
+# trait_method_network.tsv
+# ad_promising_string.tsv
 ## This secondary expansion stuff is gnarly...
 .SECONDEXPANSION:
-$(P_RESULTS_DIR)/%.tsv: $(PROMISING_BIN) $(P_RESULTS_DIR) $(KERNEL_DIR)/$$(shell echo $$(subst .tsv,,$$(@F)) | sed 's/^[^_]*_//g').mat $(GENESETS_DIR)/$$(word 1,$$(subst _, ,$$(@F))).gmt
-	mkdir -p $(@D)
-	$(PROMISING_CMD) -m $(word 3,$^) -g $(word 4,$^) -o $@
+$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PROMISING)/%.tsv): $(KERNEL_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_reglap.mat $(GENESETS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F)))).gmt $(RESULTS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F))))/$(PROMISING)
+	$(PROMISING_CMD) -m $< -g $(word 2,$^) -o $@
 
-promising_results: $$(foreach k, $$(KERNELS), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$(PROMISING)/$$(c)_$$(k).tsv))
+promising_results: $$(foreach n, $$(NETWORKS), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$$(c)/$(PROMISING)/$$(c)_promising_$$(n).tsv))
 
 ## PF
-PF_RESULTS_DIR := $(RESULTS_DIR)/pf
+PF := pf
 PF_CMD := Rscript $(DEP_DIR)/prix_fixe/run_pf.r
-NETWORK_PATHS := $(wildcard $(DNET_DIR)/*.tsv)
-NETWORKS := $(NETWORK_PATHS:$(DNET_DIR)/%.tsv=%)
+#NETWORK_PATHS := $(wildcard $(DNET_DIR)/*.tsv)
+#NETWORKS := $(NETWORK_PATHS:$(DNET_DIR)/%.tsv=%)
 
-$(PF_RESULTS_DIR):
-	mkdir -p $(PF_RESULTS_DIR)
+$(RESULTS_DIR)/%/$(PF): $(RESULTS_DIR)/%
+	mkdir -p $@
 
-$(PF_RESULTS_DIR)/%.tsv: $(PF_RESULTS_DIR) $(GENESETS_DIR)/$$(word 1,$$(subst _, ,$$(@F))).gmt $(DNET_DIR)/$$(shell echo $$(@F) | sed "s/^[^_]*_//g")
-	mkdir -p $(@D)
-	$(PF_CMD) $(word 2,$^) $(word 3,$^) $@
+$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PF)/%.tsv): $(DNET_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F)))).tsv $(GENESETS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F)))).gmt $(RESULTS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F))))/$(PF)
+	$(PF_CMD) $(word 2,$^) $< $@
 
-pf_results: $$(foreach n, $$(NETWORKS), $$(foreach c, $$(ALL_CASES), $(PF_RESULTS_DIR)/$$(c)_$$(n).tsv))
+# $(PF_RESULTS_DIR):
+# 	mkdir -p $(PF_RESULTS_DIR)
+
+# $(PF_RESULTS_DIR)/%.tsv: $(PF_RESULTS_DIR) $(GENESETS_DIR)/$$(word 1,$$(subst _, ,$$(@F))).gmt $(DNET_DIR)/$$(shell echo $$(@F) | sed "s/^[^_]*_//g")
+# 	mkdir -p $(@D)
+# 	$(PF_CMD) $(word 2,$^) $(word 3,$^) $@
+
+pf_results: $$(foreach n, $$(NETWORK_CASES), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$$(c)/$(PF)/$$(c)_pf_$$(n).tsv))
 
 all_results: promising_results pf_results
 
@@ -128,6 +165,7 @@ DMONARCH_DIR := monarch_derived
 MONARCH_CMD := $(BASE_CMD) monarch
 SMONARCH_FILES := $(wildcard $(SMONARCH_DIR)/*.tsv)
 MCASES := $(SMONARCH_FILES:$(SMONARCH_DIR)/%.tsv=%)
+
 
 $(DMONARCH_DIR)/%.txt: $(SMONARCH_DIR)/%.tsv $(UBERJAR)
 	$(MONARCH_CMD) -i $< -o $@
@@ -162,7 +200,7 @@ $(ENRICHMENT_DIR)/%.pdf: all_results monarch $(UBERJAR)
 	mkdir -p $(ENRICHMENT_DIR)
 	$(ENRICHMENT_CMD) -t $(DMONARCH_DIR)/$(@F:%.pdf=%).txt -o $@ $(wildcard $(RESULTS_DIR)/*/$(@F:%.pdf=%)_*)
 
-touch_everything:
+touch:
 	touch snps_source/*_traits.txt
 	touch snps_derived/*.txt
 	touch genesets/*.gmt
