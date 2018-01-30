@@ -32,7 +32,7 @@ $(DSNPS_DIR)/%.txt: $(SSNPS_DIR)/%_traits.txt $(SSNPS_DIR)/%.tsv $(UBERJAR)
 snps: $(SNP_CASES:%=$(SSNPS_DIR)/%_traits.txt) $(SNP_CASES:%=$(DSNPS_DIR)/%.txt)
 
 clean_snps:
-	@rm $(SNP_CASES:%=$(SSNPS_DIR)/%_traits.txt) $(SNP_CASES:%=$(DSNPS_DIR)/%.txt)
+	rm $(SNP_CASES:%=$(SSNPS_DIR)/%_traits.txt) $(SNP_CASES:%=$(DSNPS_DIR)/%.txt)
 
 # Genesets
 GENESETS_DIR := genesets
@@ -45,7 +45,7 @@ $(GENESETS_DIR)/%.gmt: $(DSNPS_DIR)/%.txt $(UBERJAR)
 gsets: $(SNP_CASES:%=$(GENESETS_DIR)/%.gmt)
 
 clean_gsets:
-	@rm $(SNP_CASES:%=$(GENESETS_DIR)/%.gmt)
+	rm $(SNP_CASES:%=$(GENESETS_DIR)/%.gmt)
 
 # Derived networks
 SNET_DIR := networks_source
@@ -53,8 +53,8 @@ DNET_DIR := networks_derived
 DNET_CMD := $(BASE_CMD) network
 STRING_NET := $(DNET_DIR)/string.tsv
 STRINGNOTM_NET := $(DNET_DIR)/stringnotm.tsv
-PF_NET := $(DNET_DIR)/pf.tsv
-NETWORK_CASES = stringnotm string pf
+PF_NET := $(DNET_DIR)/pf-cfn.tsv
+NETWORK_CASES = stringnotm string pf-cfn
 
 $(STRING_NET): $(SNET_DIR)/9606.protein.links.detailed.v10.txt $(UBERJAR) $(ANNOTAIONS)
 	$(DNET_CMD) -t string -m -s 0.15 -a $(ANNOTATIONS) -i $< -o $@
@@ -68,15 +68,27 @@ $(PF_NET): $(SNET_DIR)/main_FAN.csv $(UBERJAR) $(ANNOTATIONS)
 networks: $(NETWORK_CASES:%=$(DNET_DIR)/%.tsv)
 #networks: $(DNET_DIR)/stringnotm.tsv $(DNET_DIR)/string.tsv $(DNET_DIR)/pf.tsv
 
+clean_networks:
+	rm $(DNET_DIR)/*.tsv
+
 # Kernels
 KERNEL_DIR := kernels
-#DNETS := $(shell ls $(DNET_DIR)/*.tsv)
-#DNETS := $(wildcard $(DNET_DIR)/*.tsv)
 KERNEL_CMD := java -Xmx24g -jar $(UBERJAR) kernel
-ALPHA := 0.001
+ALPHA_PF := 0.001
+ALPHA_STRING := 0.01
+STRING_KERNEL := $(KERNEL_DIR)/string_reglap.mat
+STRINGNOTM_KERNEL := $(KERNEL_DIR)/stringnotm_reglap.mat
+PF_KERNEL := $(KERNEL_DIR)/pf-cn_reglap.mat
 
-$(KERNEL_DIR)/%_reglap.mat: $(DNET_DIR)/%.tsv $(UBERJAR)
-	$(KERNEL_CMD) -a $(ALPHA) -i $< -o $@
+$(STRING_KERNEL): $(DNET_DIR)/string.tsv $(UBERJAR)
+	$(KERNEL_CMD) -a $(ALPHA_STRING) -i $< -o $@
+
+$(STRINGNOTM_KERNEL): $(DNET_DIR)/stringnotm.tsv $(UBERJAR)
+	$(KERNEL_CMD) -a $(ALPHA_STRING) -i $< -o $@
+
+$(PF_KERNEL): $(DNET_DIR)/pf-cfn.tsv $(UBERJAR)
+	$(KERNEL_CMD) -a $(ALPHA_PF) -i $< -o $@
+
 
 kernels: $(NETWORK_CASES:%=$(KERNEL_DIR)/%_reglap.mat)
 #kernels: $(DNETS:$(DNET_DIR)/%.tsv=$(KERNEL_DIR)/%_reglap.mat)
