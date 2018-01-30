@@ -89,36 +89,55 @@ ALL_CASES := $(sort $(ALL_CASES))
 ## PROMISING
 RESULTS_DIR := results
 PROMISING := promising
-P_RESULTS_DIR := $(RESULTS_DIR)/$(PROMISING)
-PVAL_ITERATIONS := 50000
+#P_RESULTS_DIR := $(RESULTS_DIR)/$(PROMISING)
+PVAL_ITERATIONS := 10000
 KERNELS = $(NETWORKS:%=%_reglap)
 PROMISING_CMD := $(PROMISING_BIN) -p $(PVAL_ITERATIONS)
 
-$(P_RESULTS_DIR):
-	mkdir -p $(RESULTS_DIR)/$(PROMISING)
+# $(P_RESULTS_DIR):
+# 	mkdir -p $(RESULTS_DIR)/$(PROMISING)
 
+# $(P_RESULTS_DIR)/%.tsv: $(PROMISING_BIN) $(P_RESULTS_DIR) $(KERNEL_DIR)/$$(shell echo $$(subst .tsv,,$$(@F)) | sed 's/^[^_]*_//g').mat $(GENESETS_DIR)/$$(word 1,$$(subst _, ,$$(@F))).gmt
+# 	mkdir -p $(@D)
+# 	$(PROMISING_CMD) -m $(word 3,$^) -g $(word 4,$^) -o $@
+
+# promising_results: $$(foreach k, $$(KERNELS), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$(PROMISING)/$$(c)_$$(k).tsv))
+
+$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)):
+	mkdir -p $@
+
+$(RESULTS_DIR)/%/$(PROMISING): $(RESULTS_DIR)/%
+	mkdir -p $@
+
+# trait_method_network.tsv
+# ad_promising_string.tsv
 ## This secondary expansion stuff is gnarly...
 .SECONDEXPANSION:
-$(P_RESULTS_DIR)/%.tsv: $(PROMISING_BIN) $(P_RESULTS_DIR) $(KERNEL_DIR)/$$(shell echo $$(subst .tsv,,$$(@F)) | sed 's/^[^_]*_//g').mat $(GENESETS_DIR)/$$(word 1,$$(subst _, ,$$(@F))).gmt
-	mkdir -p $(@D)
-	$(PROMISING_CMD) -m $(word 3,$^) -g $(word 4,$^) -o $@
+$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PROMISING)/%.tsv): $(KERNEL_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_reglap.mat $(GENESETS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F)))).gmt $(RESULTS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F))))/$(PROMISING)
+	$(PROMISING_CMD) -m $< -g $(word 2,$^) -o $@
 
-promising_results: $$(foreach k, $$(KERNELS), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$(PROMISING)/$$(c)_$$(k).tsv))
+promising_results: $$(foreach n, $$(NETWORKS), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$$(c)/$(PROMISING)/$$(c)_promising_$$(n).tsv))
 
 ## PF
-PF_RESULTS_DIR := $(RESULTS_DIR)/pf
+PF := pf
 PF_CMD := Rscript $(DEP_DIR)/prix_fixe/run_pf.r
 NETWORK_PATHS := $(wildcard $(DNET_DIR)/*.tsv)
 NETWORKS := $(NETWORK_PATHS:$(DNET_DIR)/%.tsv=%)
 
-$(PF_RESULTS_DIR):
-	mkdir -p $(PF_RESULTS_DIR)
+$(RESULTS_DIR)/%/$(PF): $(RESULTS_DIR)/%
+	mkdir -p $@
 
-$(PF_RESULTS_DIR)/%.tsv: $(PF_RESULTS_DIR) $(GENESETS_DIR)/$$(word 1,$$(subst _, ,$$(@F))).gmt $(DNET_DIR)/$$(shell echo $$(@F) | sed "s/^[^_]*_//g")
-	mkdir -p $(@D)
-	$(PF_CMD) $(word 2,$^) $(word 3,$^) $@
+$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PF)/%.tsv): $(DNET_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F)))).tsv $(GENESETS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F)))).gmt $(RESULTS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F))))/$(PF)
+	$(PF_CMD) $(word 2,$^) $< $@
 
-pf_results: $$(foreach n, $$(NETWORKS), $$(foreach c, $$(ALL_CASES), $(PF_RESULTS_DIR)/$$(c)_$$(n).tsv))
+# $(PF_RESULTS_DIR):
+# 	mkdir -p $(PF_RESULTS_DIR)
+
+# $(PF_RESULTS_DIR)/%.tsv: $(PF_RESULTS_DIR) $(GENESETS_DIR)/$$(word 1,$$(subst _, ,$$(@F))).gmt $(DNET_DIR)/$$(shell echo $$(@F) | sed "s/^[^_]*_//g")
+# 	mkdir -p $(@D)
+# 	$(PF_CMD) $(word 2,$^) $(word 3,$^) $@
+
+pf_results: $$(foreach n, $$(NETWORKS), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$$(c)/$(PF)/$$(c)_pf_$$(n).tsv))
 
 all_results: promising_results pf_results
 
@@ -128,6 +147,7 @@ DMONARCH_DIR := monarch_derived
 MONARCH_CMD := $(BASE_CMD) monarch
 SMONARCH_FILES := $(wildcard $(SMONARCH_DIR)/*.tsv)
 MCASES := $(SMONARCH_FILES:$(SMONARCH_DIR)/%.tsv=%)
+
 
 $(DMONARCH_DIR)/%.txt: $(SMONARCH_DIR)/%.tsv $(UBERJAR)
 	$(MONARCH_CMD) -i $< -o $@
@@ -159,7 +179,7 @@ ENRICHMENT_CMD := $(BASE_CMD)
 $(VALIDATION_DIR)/%.png: $(VALIDATION_DIR)/%.txt
 	@
 
-touch_everything:
+touch:
 	touch snps_source/*_traits.txt
 	touch snps_derived/*.txt
 	touch genesets/*.gmt
