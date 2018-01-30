@@ -90,12 +90,6 @@ $(STRINGNOTM_KERNEL): $(STRINGNOTM_NET) $(UBERJAR)
 $(PF_KERNEL): $(PF_NET) $(UBERJAR)
 	$(KERNEL_CMD) -a $(ALPHA_PF) -i $< -o $@
 
-
-foo:
-	@echo $(STRINGNOTM_KERNEL)
-	@echo $(STRINGNOTM_NET)
-	@echo $(NETWORK_CASES:%=$(KERNEL_DIR)/%_reglap.mat)
-
 all_kernels: $(NETWORK_CASES:%=$(KERNEL_DIR)/%_reglap.mat)
 #kernels: $(DNETS:$(DNET_DIR)/%.tsv=$(KERNEL_DIR)/%_reglap.mat)
 
@@ -134,7 +128,7 @@ $(RESULTS_DIR)/%/$(PROMISING): $(RESULTS_DIR)/%
 $(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PROMISING)/%.tsv): $(KERNEL_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_reglap.mat $(GENESETS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F)))).gmt $(RESULTS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F))))/$(PROMISING)
 	$(PROMISING_CMD) -m $< -g $(word 2,$^) -o $@
 
-promising_results: $$(foreach n, $$(NETWORKS), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$$(c)/$(PROMISING)/$$(c)_promising_$$(n).tsv))
+promising_results: $$(foreach n, $$(NETWORK_CASES), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$$(c)/$(PROMISING)/$$(c)_promising_$$(n).tsv))
 
 ## PF
 PF := pf
