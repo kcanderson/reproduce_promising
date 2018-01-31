@@ -9,4 +9,19 @@ ra.tsv: NHGRI GWAS catalog search for "rheumatoid arthritis".
 Downloaded 2018-01-25
 
 cd.tsv: NHGRI GWAS catalog search for "crohn's disease".
-Downloads 2018-01-25
+Downloaded 2018-01-25
+
+vtlg.tsv: NHGRI GWAS catalog search for "vitiligo".
+Downloaded 2018-01-30
+
+ht.tsv: NHGRI GWAS catalog search for "hypertension".
+Downloaded 2018-01-30
+
+hdl.tsv: NHGRI GWAS catalog search for "hdl cholesterol".
+Downloaded 2018-01-30
+
+ldl.tsv: NHGRI GWAS catalog search for "ldl cholesterol".
+Downloaded 2018-01-30
+
+armd.tsv: NHGRI GWAS catalog search for "age-related macular degeneration".
+Downloaded 2018-01-30
