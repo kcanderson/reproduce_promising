@@ -185,11 +185,14 @@ $(VALIDATION_DIR)/%.txt: $(RESULTS_DIR)/%.tsv $(DMONARCH_DIR)/$$(word 1,$$(subst
 
 all_validation: $(RESULTS:$(RESULTS_DIR)/%.tsv=$(VALIDATION_DIR)/%.txt)
 
-ENRICHMENT_DIR := enrichment_figures
-ENRICHMENT_CMD := $(BASE_CMD) 
 
-$(VALIDATION_DIR)/%.png: $(VALIDATION_DIR)/%.txt
-	@
+# Evaluation
+ENRICHMENT_DIR := $(VALIDATION_DIR)/enrichment_figures
+ENRICHMENT_CMD := $(BASE_CMD) enrichment-figure
+
+$(ENRICHMENT_DIR)/%.pdf: all_results monarch $(UBERJAR)
+	mkdir -p $(ENRICHMENT_DIR)
+	$(ENRICHMENT_CMD) -t $(DMONARCH_DIR)/$(@F:%.pdf=%).txt -o $@ $(wildcard $(RESULTS_DIR)/*/$(@F:%.pdf=%)_*)
 
 touch:
 	touch snps_source/*_traits.txt
