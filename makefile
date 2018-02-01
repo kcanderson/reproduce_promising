@@ -178,10 +178,15 @@ VALIDATION_DIR := validation
 ##validation: monarch results $(VALIDATION_FILEPATH)
 
 RESULTS = $(shell find $(RESULTS_DIR) -iname "*.tsv")
+COMMON_CMD := $(BASE_CMD) commonalities
+COMMON_GENE_SUFFIX := common.glist
 
-$(VALIDATION_DIR)/%.txt: $(RESULTS_DIR)/%.tsv $(DMONARCH_DIR)/$$(word 1,$$(subst _, ,$$(@F))).txt $(UBERJAR)
+$(foreach c,$(ALL_CASES),$(foreach n,$(NETWORK_CASES),$(VALIDATION_DIR)/$(c)/$(c)_$(n)_$(COMMON_GENE_SUFFIX))):
+	$(COMMON_CMD) -o $@ $(RESULTS_DIR)/$(word 1,$(subst _, ,$(@F)))/*/$(word 1,$(subst _, ,$(@F)))_*_$(word 2,$(subst _, ,$(@F))).tsv
+
+$(VALIDATION_DIR)/%.txt: $(RESULTS_DIR)/%.tsv $(DMONARCH_DIR)/$$(word 1,$$(subst _, ,$$(@F))).txt $(VALIDATION_DIR)/$$(word 1,$$(subst _, ,$$(@F)))/$$(word 1,$$(subst _, ,$$(@F)))_$$(word 3,$$(subst .txt,,$$(subst _, ,$$(@F))))_$(COMMON_GENE_SUFFIX) $(UBERJAR)
 	mkdir -p $(@D)
-	$(VALIDATION_CMD) -r $< -t $(word 2,$^) -o $@
+	$(VALIDATION_CMD) -r $< -t $(word 2,$^) -o $@ -c $(word 3,$^)
 
 all_validation: $(RESULTS:$(RESULTS_DIR)/%.tsv=$(VALIDATION_DIR)/%.txt)
 
@@ -194,11 +199,15 @@ $(ENRICHMENT_DIR)/%.pdf: all_results monarch $(UBERJAR)
 	mkdir -p $(ENRICHMENT_DIR)
 	$(ENRICHMENT_CMD) -t $(DMONARCH_DIR)/$(@F:%.pdf=%).txt -o $@ $(wildcard $(RESULTS_DIR)/*/$(@F:%.pdf=%)_*)
 
+
+
+
+
 touch:
 	touch snps_source/*_traits.txt
 	touch snps_derived/*.txt
 	touch genesets/*.gmt
 	touch networks_derived/*.tsv
 	touch kernels/*.mat
-	touch results/*/*.tsv
+	touch results/*/*/*.tsv
 	touch monarch_derived/*.txt
