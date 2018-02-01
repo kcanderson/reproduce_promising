@@ -102,7 +102,7 @@ ALL_CASES := $(sort $(ALL_CASES))
 RESULTS_DIR := results
 PROMISING := promising
 #P_RESULTS_DIR := $(RESULTS_DIR)/$(PROMISING)
-PVAL_ITERATIONS := 10000
+PVAL_ITERATIONS := 20000
 KERNELS = $(NETWORKS:%=%_reglap)
 PROMISING_CMD := $(PROMISING_BIN) -p $(PVAL_ITERATIONS)
 
@@ -200,8 +200,9 @@ $(ENRICHMENT_DIR)/%.pdf: all_results monarch $(UBERJAR)
 	$(ENRICHMENT_CMD) -t $(DMONARCH_DIR)/$(@F:%.pdf=%).txt -o $@ $(wildcard $(RESULTS_DIR)/*/$(@F:%.pdf=%)_*)
 
 
-
-
+COMPARISON_CMD := $(BASE_CMD) comparison
+comparison: all_results
+	$(COMPARISON_CMD) -r $(RESULTS_DIR) -t $(DMONARCH_DIR) -o $(VALIDATION_DIR)/comparison.tsv
 
 touch:
 	touch snps_source/*_traits.txt
