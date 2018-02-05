@@ -182,6 +182,7 @@ COMMON_CMD := $(BASE_CMD) commonalities
 COMMON_GENE_SUFFIX := common.glist
 
 $(foreach c,$(ALL_CASES),$(foreach n,$(NETWORK_CASES),$(VALIDATION_DIR)/$(c)/$(c)_$(n)_$(COMMON_GENE_SUFFIX))):
+	mkdir -p $(@D)
 	$(COMMON_CMD) -o $@ $(RESULTS_DIR)/$(word 1,$(subst _, ,$(@F)))/*/$(word 1,$(subst _, ,$(@F)))_*_$(word 2,$(subst _, ,$(@F))).tsv
 
 $(VALIDATION_DIR)/%.txt: $(RESULTS_DIR)/%.tsv $(DMONARCH_DIR)/$$(word 1,$$(subst _, ,$$(@F))).txt $(VALIDATION_DIR)/$$(word 1,$$(subst _, ,$$(@F)))/$$(word 1,$$(subst _, ,$$(@F)))_$$(word 3,$$(subst .txt,,$$(subst _, ,$$(@F))))_$(COMMON_GENE_SUFFIX) $(UBERJAR)
@@ -189,7 +190,6 @@ $(VALIDATION_DIR)/%.txt: $(RESULTS_DIR)/%.tsv $(DMONARCH_DIR)/$$(word 1,$$(subst
 	$(VALIDATION_CMD) -r $< -t $(word 2,$^) -o $@ -c $(word 3,$^)
 
 all_validation: $(RESULTS:$(RESULTS_DIR)/%.tsv=$(VALIDATION_DIR)/%.txt)
-
 
 # Evaluation
 ENRICHMENT_DIR := $(VALIDATION_DIR)/enrichment_figures
@@ -202,7 +202,7 @@ $(ENRICHMENT_DIR)/%.pdf: all_results monarch $(UBERJAR)
 
 COMPARISON_CMD := $(BASE_CMD) comparison
 comparison: all_results
-	$(COMPARISON_CMD) -r $(RESULTS_DIR) -t $(DMONARCH_DIR) -o $(VALIDATION_DIR)/comparison.tsv
+	$(COMPARISON_CMD) -r $(RESULTS_DIR) -t $(DMONARCH_DIR) -v $(VALIDATION_DIR) -o $(VALIDATION_DIR)/comparison.tsv
 
 touch:
 	touch snps_source/*_traits.txt
@@ -212,3 +212,5 @@ touch:
 	touch kernels/*.mat
 	touch results/*/*/*.tsv
 	touch monarch_derived/*.txt
+	touch validation/*/*$(COMMON_GENE_SUFFIX)
+	touch validation/*/*/*.txt
