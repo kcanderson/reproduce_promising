@@ -93,6 +93,13 @@ $(PF_KERNEL): $(PF_NET) $(UBERJAR)
 all_kernels: $(NETWORK_CASES:%=$(KERNEL_DIR)/%_reglap.mat)
 #kernels: $(DNETS:$(DNET_DIR)/%.tsv=$(KERNEL_DIR)/%_reglap.mat)
 
+# Degree groups
+GENES_PER_DEGREE_GROUP := 500
+DEGREE_CMD := $(BASE_CMD) degree-groups -s $(GENES_PER_DEGREE_GROUP)
+
+$(DNET_DIR)/%_degree-groups.gmt: $(DNET_DIR)/%.tsv $(UBERJAR)
+	$(DEGREE_CMD) -n $< -o $@
+
 # Results
 GENESET_CASES := $(patsubst $(GENESETS_DIR)/%.gmt,%,$(wildcard $(GENESETS_DIR)/*.gmt))
 ALL_CASES := $(SNP_CASES) $(GENESET_CASES)
@@ -102,18 +109,9 @@ ALL_CASES := $(sort $(ALL_CASES))
 RESULTS_DIR := results
 PROMISING := promising
 #P_RESULTS_DIR := $(RESULTS_DIR)/$(PROMISING)
-PVAL_ITERATIONS := 20000
+PVAL_ITERATIONS := 1000
 KERNELS = $(NETWORKS:%=%_reglap)
 PROMISING_CMD := $(PROMISING_BIN) -p $(PVAL_ITERATIONS)
-
-# $(P_RESULTS_DIR):
-# 	mkdir -p $(RESULTS_DIR)/$(PROMISING)
-
-# $(P_RESULTS_DIR)/%.tsv: $(PROMISING_BIN) $(P_RESULTS_DIR) $(KERNEL_DIR)/$$(shell echo $$(subst .tsv,,$$(@F)) | sed 's/^[^_]*_//g').mat $(GENESETS_DIR)/$$(word 1,$$(subst _, ,$$(@F))).gmt
-# 	mkdir -p $(@D)
-# 	$(PROMISING_CMD) -m $(word 3,$^) -g $(word 4,$^) -o $@
-
-# promising_results: $$(foreach k, $$(KERNELS), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$(PROMISING)/$$(c)_$$(k).tsv))
 
 $(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)):
 	mkdir -p $@
@@ -125,8 +123,8 @@ $(RESULTS_DIR)/%/$(PROMISING): $(RESULTS_DIR)/%
 # ad_promising_string.tsv
 ## This secondary expansion stuff is gnarly...
 .SECONDEXPANSION:
-$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PROMISING)/%.tsv): $(KERNEL_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_reglap.mat $(GENESETS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F)))).gmt $(RESULTS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F))))/$(PROMISING)
-	$(PROMISING_CMD) -m $< -g $(word 2,$^) -o $@
+$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PROMISING)/%.tsv): $(KERNEL_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_reglap.mat $(GENESETS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F)))).gmt $(RESULTS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F))))/$(PROMISING) $(DNET_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_degree-groups.gmt
+	$(PROMISING_CMD) -m $< -g $(word 2,$^) -o $@ -d $(word 4,$^)
 
 promising_results: $$(foreach n, $$(NETWORK_CASES), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$$(c)/$(PROMISING)/$$(c)_promising_$$(n).tsv))
 
@@ -203,6 +201,8 @@ $(ENRICHMENT_DIR)/%.pdf: all_results monarch $(UBERJAR)
 COMPARISON_CMD := $(BASE_CMD) comparison
 comparison: all_results
 	$(COMPARISON_CMD) -r $(RESULTS_DIR) -t $(DMONARCH_DIR) -v $(VALIDATION_DIR) -o $(VALIDATION_DIR)/comparison.tsv
+
+
 
 touch:
 	touch snps_source/*_traits.txt
