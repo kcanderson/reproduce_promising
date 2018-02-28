@@ -74,10 +74,15 @@ pf <- GPF$PF$new(genesets, edges)
 pf.results <- GPF$GA$scoreVertices(GPF$GA$run(pf))
 
 ## Output in appropriate format
-colnames(pf.results) <- c("locus", "gene", "score", "scaled_score")
-head(pf.results)
-pf.results$gene <- makeHGNC(pf.results$gene)
-pf.results <- pf.results[order(pf.results$score, decreasing=TRUE),]
+if (!is.null(pf.results)) {
+    colnames(pf.results) <- c("locus", "gene", "score", "scaled_score")
+    head(pf.results)
+    pf.results$gene <- makeHGNC(pf.results$gene)
+    pf.results <- pf.results[order(pf.results$score, decreasing=TRUE),]
 
-write.table(pf.results, file = output.filename, sep = "\t", row.names = FALSE, quote = FALSE)
-
+    write.table(pf.results, file = output.filename, sep = "\t", row.names = FALSE, quote = FALSE)
+} else {
+    f <- file(output.filename)
+    writeLines("locus\tgene\tscore\tscaled_score\n", f)
+    close(f)
+}

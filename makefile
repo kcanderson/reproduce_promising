@@ -21,7 +21,8 @@ $(UBERJAR) $(PROMSING_BIN) $(ANNOTATIONS):
 # SNPs
 DSNPS_DIR := snps_derived
 TRAITS_CMD := $(BASE_CMD) select-traits
-SNPS_CMD := $(BASE_CMD) snps
+PVAL_THRESH := 1 # take everything
+SNPS_CMD := $(BASE_CMD) snps -p $(PVAL_THRESH)
 
 $(SSNPS_DIR)/%_traits.txt: $(SSNPS_DIR)/%.tsv $(UBERJAR)
 	$(TRAITS_CMD) -i $< -o $@
@@ -37,7 +38,7 @@ clean_snps:
 # Genesets
 GENESETS_DIR := genesets
 GENESETS_CMD := $(BASE_CMD) genesets
-FLANK := 50000
+FLANK := 100000
 
 $(GENESETS_DIR)/%.gmt: $(DSNPS_DIR)/%.txt $(UBERJAR)
 	$(GENESETS_CMD) -i $< -o $@ -f $(FLANK)
@@ -111,7 +112,8 @@ PROMISING := promising
 #P_RESULTS_DIR := $(RESULTS_DIR)/$(PROMISING)
 PVAL_ITERATIONS := 1000
 KERNELS = $(NETWORKS:%=%_reglap)
-PROMISING_CMD := $(PROMISING_BIN) -p $(PVAL_ITERATIONS)
+PROMISING_CMD := $(PROMISING_BIN) -z complete -s 4
+# -p $(PVAL_ITERATIONS)
 
 $(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)):
 	mkdir -p $@
@@ -165,7 +167,7 @@ $(DMONARCH_DIR)/%.txt: $(SMONARCH_DIR)/%.tsv $(UBERJAR)
 monarch: $(MCASES:%=$(DMONARCH_DIR)/%.txt)
 
 # Validation
-PVAL_ITERATIONS_VAL := 10000
+PVAL_ITERATIONS_VAL := 2000
 VALIDATION_CMD := java -jar $(UBERJAR) validate -p $(PVAL_ITERATIONS_VAL)
 VALIDATION_DIR := validation
 
@@ -178,8 +180,10 @@ VALIDATION_DIR := validation
 RESULTS = $(shell find $(RESULTS_DIR) -iname "*.tsv")
 COMMON_CMD := $(BASE_CMD) commonalities
 COMMON_GENE_SUFFIX := common.glist
+METHODS := pf promising
 
-$(foreach c,$(ALL_CASES),$(foreach n,$(NETWORK_CASES),$(VALIDATION_DIR)/$(c)/$(c)_$(n)_$(COMMON_GENE_SUFFIX))):
+$(foreach c,$(ALL_CASES),$(foreach n,$(NETWORK_CASES),$(VALIDATION_DIR)/$(c)/$(c)_$(n)_$(COMMON_GENE_SUFFIX))): $(foreach m, $(METHODS),$(RESULTS_DIR)/$$(word 1,$$(subst _, ,$$(@F)))/$(m)/$$(word 1,$$(subst _, ,$$(@F)))_$(m)_$$(word 2,$$(subst _, ,$$(@F))).tsv)
+	echo $(foreach m, $(METHODS),$(RESULS_DIR)/$(word 1,$(subst _, ,$(@F)))/$(word 1,$(subst _, ,$(@F)))_$(m)_$(word 2,$(subst _, ,$(@F))).tsv)
 	mkdir -p $(@D)
 	$(COMMON_CMD) -o $@ $(RESULTS_DIR)/$(word 1,$(subst _, ,$(@F)))/*/$(word 1,$(subst _, ,$(@F)))_*_$(word 2,$(subst _, ,$(@F))).tsv
 
@@ -189,6 +193,8 @@ $(VALIDATION_DIR)/%.txt: $(RESULTS_DIR)/%.tsv $(DMONARCH_DIR)/$$(word 1,$$(subst
 
 all_validation: $(RESULTS:$(RESULTS_DIR)/%.tsv=$(VALIDATION_DIR)/%.txt)
 
+commonalities: $(foreach c,$(ALL_CASES), $(foreach n,$(NETWORK_CASES),$(VALIDATION_DIR)/$(c)/$(c)_$(n)_$(COMMON_GENE_SUFFIX)))
+
 # Evaluation
 ENRICHMENT_DIR := $(VALIDATION_DIR)/enrichment_figures
 ENRICHMENT_CMD := $(BASE_CMD) enrichment-figure
@@ -197,18 +203,24 @@ $(ENRICHMENT_DIR)/%.pdf: all_results monarch $(UBERJAR)
 	mkdir -p $(ENRICHMENT_DIR)
 	$(ENRICHMENT_CMD) -t $(DMONARCH_DIR)/$(@F:%.pdf=%).txt -o $@ $(wildcard $(RESULTS_DIR)/*/$(@F:%.pdf=%)_*)
 
-
 COMPARISON_CMD := $(BASE_CMD) comparison
-comparison: all_results
+comparison: #all_results
 	$(COMPARISON_CMD) -r $(RESULTS_DIR) -t $(DMONARCH_DIR) -v $(VALIDATION_DIR) -o $(VALIDATION_DIR)/comparison.tsv
 
+OMIM_DIR := omim
+PHENOTYPIC_SERIES_FILE := $(OMIM_DIR)/phenotypic-series-all.txt
+NUM_GENES_LOCUS := 25
+OMIM_CMD := $(BASE_CMD) omim-genesets-cmd -i $(PHENOTYPIC_SERIES_FILE) -a $(ANNOTATIONS) -g $(GENESETS_DIR) -t $(DMONARCH_DIR) -n $(NUM_GENES_LOCUS)
 
+all_omim: $(PHENOTYPIC_SERIES_FILE)
+	$(OMIM_CMD)
 
 touch:
 	touch snps_source/*_traits.txt
 	touch snps_derived/*.txt
 	touch genesets/*.gmt
 	touch networks_derived/*.tsv
+	touch networks_derived/*.gmt
 	touch kernels/*.mat
 	touch results/*/*/*.tsv
 	touch monarch_derived/*.txt
