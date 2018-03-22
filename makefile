@@ -21,7 +21,7 @@ $(UBERJAR) $(PROMSING_BIN) $(ANNOTATIONS):
 # SNPs
 DSNPS_DIR := snps_derived
 TRAITS_CMD := $(BASE_CMD) select-traits
-PVAL_THRESH := 1 # take everything
+PVAL_THRESH := 1 # 5e-8 # take everything
 SNPS_CMD := $(BASE_CMD) snps -p $(PVAL_THRESH)
 
 $(SSNPS_DIR)/%_traits.txt: $(SSNPS_DIR)/%.tsv $(UBERJAR)
@@ -76,23 +76,23 @@ clean_networks:
 # Kernels
 KERNEL_DIR := kernels
 KERNEL_CMD := java -Xmx24g -jar $(UBERJAR) kernel
-ALPHA_PF := 0.001
-ALPHA_STRING := 0.01
-STRING_KERNEL := $(KERNEL_DIR)/string_reglap.mat
-STRINGNOTM_KERNEL := $(KERNEL_DIR)/stringnotm_reglap.mat
-PF_KERNEL := $(KERNEL_DIR)/pf-cfn_reglap.mat
+PF_KERNEL_OPTS := -t vonneumann -a 0.001
+STRING_KERNEL_OPTS := -t reglaplacian -a 0.0075
+STRINGNOTM_KERNEL_OPTS := -t reglaplacian -a 0.0075
+STRING_KERNEL := $(KERNEL_DIR)/string_kernel.mat
+STRINGNOTM_KERNEL := $(KERNEL_DIR)/stringnotm_kernel.mat
+PF_KERNEL := $(KERNEL_DIR)/pf-cfn_kernel.mat
 
 $(STRING_KERNEL): $(STRING_NET) $(UBERJAR)
-	$(KERNEL_CMD) -a $(ALPHA_STRING) -i $< -o $@
+	$(KERNEL_CMD) $(STRING_KERNEL_OPTS) -i $< -o $@
 
 $(STRINGNOTM_KERNEL): $(STRINGNOTM_NET) $(UBERJAR)
-	$(KERNEL_CMD) -a $(ALPHA_STRING) -i $< -o $@
+	$(KERNEL_CMD) $(STRINGNOTM_KERNEL_OPTS) -i $< -o $@
 
 $(PF_KERNEL): $(PF_NET) $(UBERJAR)
-	$(KERNEL_CMD) -a $(ALPHA_PF) -i $< -o $@
+	$(KERNEL_CMD) $(PF_KERNEL_OPTS) -i $< -o $@
 
-all_kernels: $(NETWORK_CASES:%=$(KERNEL_DIR)/%_reglap.mat)
-#kernels: $(DNETS:$(DNET_DIR)/%.tsv=$(KERNEL_DIR)/%_reglap.mat)
+all_kernels: $(NETWORK_CASES:%=$(KERNEL_DIR)/%_kernel.mat)
 
 # Degree groups
 GENES_PER_DEGREE_GROUP := 500
@@ -111,24 +111,72 @@ RESULTS_DIR := results
 PROMISING := promising
 #P_RESULTS_DIR := $(RESULTS_DIR)/$(PROMISING)
 PVAL_ITERATIONS := 1000
-KERNELS = $(NETWORKS:%=%_reglap)
-PROMISING_CMD := $(PROMISING_BIN) -z complete -s 4
+PROMISING_CMD := $(PROMISING_BIN)
+#-z complete -s 4
 # -p $(PVAL_ITERATIONS)
 
 $(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)):
-	mkdir -p $@
+	if [ ! -d $@ ]; then mkdir -p $@; fi;
 
 $(RESULTS_DIR)/%/$(PROMISING): $(RESULTS_DIR)/%
-	mkdir -p $@
+	if [ ! -d $@ ]; then mkdir -p $@; fi;
+
+PROMISING_FAST := promisingfast
+$(RESULTS_DIR)/%/$(PROMISING_FAST): $(RESULTS_DIR)/%
+	if [ ! -d $@ ]; then mkdir -p $@; fi;
+
+PROMISING_SIMPLE := promisingsimple
+$(RESULTS_DIR)/%/$(PROMISING_SIMPLE): $(RESULTS_DIR)/%
+	if [ ! -d $@ ]; then mkdir -p $@; fi;
+
+PROMISING_SUM := promisingsum
+$(RESULTS_DIR)/%/$(PROMISING_SUM): $(RESULTS_DIR)/%
+	if [ ! -d $@ ]; then mkdir -p $@; fi;
+
+PROMISING_COMPLETE3 := promisingcomplete3
+$(RESULTS_DIR)/%/$(PROMISING_COMPLETE3): $(RESULTS_DIR)/%
+	if [ ! -d $@ ]; then mkdir -p $@; fi;
+
+PROMISING_COMPLETE5 := promisingcomplete5
+$(RESULTS_DIR)/%/$(PROMISING_COMPLETE5): $(RESULTS_DIR)/%
+	if [ ! -d $@ ]; then mkdir -p $@; fi;
+
+
+PROMISING_TEST := promisingtest2
+$(RESULTS_DIR)/%/$(PROMISING_TEST): $(RESULTS_DIR)/%
+	if [ ! -d $@ ]; then mkdir -p $@; fi;
 
 # trait_method_network.tsv
 # ad_promising_string.tsv
 ## This secondary expansion stuff is gnarly...
 .SECONDEXPANSION:
-$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PROMISING)/%.tsv): $(KERNEL_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_reglap.mat $(GENESETS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F)))).gmt $(RESULTS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F))))/$(PROMISING) $(DNET_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_degree-groups.gmt
-	$(PROMISING_CMD) -m $< -g $(word 2,$^) -o $@ -d $(word 4,$^)
+$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PROMISING)/%.tsv): $(KERNEL_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_kernel.mat $(GENESETS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F)))).gmt $(RESULTS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F))))/$(PROMISING) $(DNET_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_degree-groups.gmt
+	$(PROMISING_CMD) -z complete -s 4 -m $< -g $(word 2,$^) -o $@ #-d $(word 4,$^)
 
-promising_results: $$(foreach n, $$(NETWORK_CASES), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$$(c)/$(PROMISING)/$$(c)_promising_$$(n).tsv))
+# promisingfast/[case]_promisingfast_[network].tsv
+$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PROMISING_FAST)/%.tsv): $(KERNEL_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_kernel.mat $(GENESETS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F)))).gmt $(RESULTS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F))))/$(PROMISING_FAST) $(DNET_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_degree-groups.gmt
+	$(PROMISING_CMD) -z fast -m $< -g $(word 2,$^) -o $@ #-d $(word 4,$^)
+
+
+$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PROMISING_SIMPLE)/%.tsv): $(KERNEL_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_kernel.mat $(GENESETS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F)))).gmt $(RESULTS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F))))/$(PROMISING_SIMPLE) $(DNET_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_degree-groups.gmt
+	$(PROMISING_CMD) -z simple -m $< -g $(word 2,$^) -o $@ #-d $(word 4,$^)
+
+$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PROMISING_SUM)/%.tsv): $(KERNEL_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_kernel.mat $(GENESETS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F)))).gmt $(RESULTS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F))))/$(PROMISING_SUM) $(DNET_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_degree-groups.gmt
+	$(PROMISING_CMD) -z sum -m $< -g $(word 2,$^) -o $@ #-d $(word 4,$^)
+
+$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PROMISING_COMPLETE3)/%.tsv): $(KERNEL_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_kernel.mat $(GENESETS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F)))).gmt $(RESULTS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F))))/$(PROMISING_COMPLETE3) $(DNET_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_degree-groups.gmt
+	$(PROMISING_CMD) -z complete -s 3 -m $< -g $(word 2,$^) -o $@ #-d $(word 4,$^)
+
+$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PROMISING_COMPLETE5)/%.tsv): $(KERNEL_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_kernel.mat $(GENESETS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F)))).gmt $(RESULTS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F))))/$(PROMISING_COMPLETE5) $(DNET_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_degree-groups.gmt
+	$(PROMISING_CMD) -z complete -s 5 -m $< -g $(word 2,$^) -o $@ #-d $(word 4,$^)
+
+$(foreach c,$(ALL_CASES),$(RESULTS_DIR)/$(c)/$(PROMISING_TEST)/%.tsv): $(KERNEL_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_kernel.mat $(GENESETS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F)))).gmt $(RESULTS_DIR)/$$(subst .tsv,,$$(word 1,$$(subst _, ,$$(@F))))/$(PROMISING_TEST) $(DNET_DIR)/$$(subst .tsv,,$$(word 3,$$(subst _, ,$$(@F))))_degree-groups.gmt
+	$(PROMISING_CMD) -z test -m $< -g $(word 2,$^) -o $@ #-d $(word 4,$^)
+
+PROMISING_NETWORK_CASES := $(NETWORK_CASES) pf-cfn-amat stringnotm-amat string-amat
+
+promising_results: $$(foreach n, $$(PROMISING_NETWORK_CASES), $$(foreach c, $$(ALL_CASES), $(RESULTS_DIR)/$$(c)/$(PROMISING)/$$(c)_$(PROMISING)_$$(n).tsv $(RESULTS_DIR)/$$(c)/$(PROMISING_FAST)/$$(c)_$(PROMISING_FAST)_$$(n).tsv $(RESULTS_DIR)/$$(c)/$(PROMISING_SIMPLE)/$$(c)_$(PROMISING_SIMPLE)_$$(n).tsv $(RESULTS_DIR)/$$(c)/$(PROMISING_SUM)/$$(c)_$(PROMISING_SUM)_$$(n).tsv $(RESULTS_DIR)/$$(c)/$(PROMISING_COMPLETE3)/$$(c)_$(PROMISING_COMPLETE3)_$$(n).tsv $(RESULTS_DIR)/$$(c)/$(PROMISING_TEST)/$$(c)_$(PROMISING_TEST)_$$(n).tsv $(RESULTS_DIR)/$$(c)/$(PROMISING_COMPLETE5)/$$(c)_$(PROMISING_COMPLETE5)_$$(n).tsv))
+
 
 ## PF
 PF := pf
@@ -167,7 +215,7 @@ $(DMONARCH_DIR)/%.txt: $(SMONARCH_DIR)/%.tsv $(UBERJAR)
 monarch: $(MCASES:%=$(DMONARCH_DIR)/%.txt)
 
 # Validation
-PVAL_ITERATIONS_VAL := 2000
+PVAL_ITERATIONS_VAL := 10
 VALIDATION_CMD := java -jar $(UBERJAR) validate -p $(PVAL_ITERATIONS_VAL)
 VALIDATION_DIR := validation
 
@@ -199,7 +247,7 @@ commonalities: $(foreach c,$(ALL_CASES), $(foreach n,$(NETWORK_CASES),$(VALIDATI
 ENRICHMENT_DIR := $(VALIDATION_DIR)/enrichment_figures
 ENRICHMENT_CMD := $(BASE_CMD) enrichment-figure
 
-$(ENRICHMENT_DIR)/%.pdf: all_results monarch $(UBERJAR)
+$(ENRICHMENT_DIR)/%.pdf: #all_results monarch $(UBERJAR)
 	mkdir -p $(ENRICHMENT_DIR)
 	$(ENRICHMENT_CMD) -t $(DMONARCH_DIR)/$(@F:%.pdf=%).txt -o $@ $(wildcard $(RESULTS_DIR)/*/$(@F:%.pdf=%)_*)
 
@@ -209,7 +257,7 @@ comparison: #all_results
 
 OMIM_DIR := omim
 PHENOTYPIC_SERIES_FILE := $(OMIM_DIR)/phenotypic-series-all.txt
-NUM_GENES_LOCUS := 25
+NUM_GENES_LOCUS := 50
 OMIM_CMD := $(BASE_CMD) omim-genesets-cmd -i $(PHENOTYPIC_SERIES_FILE) -a $(ANNOTATIONS) -g $(GENESETS_DIR) -t $(DMONARCH_DIR) -n $(NUM_GENES_LOCUS)
 
 all_omim: $(PHENOTYPIC_SERIES_FILE)

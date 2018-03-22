@@ -19,3 +19,11 @@ https://monarchinitiative.org/disease/MONDO:0007254
 
 Type 2 diabetes (t2d.tsv)
 https://monarchinitiative.org/disease/MONDO:0005148
+
+Crohn's disease (cd.tsv)
+Phenotype: Gastrointestinal inflammation (HP:0004386)
+https://monarchinitiative.org/phenotype/HP:0004386
+
+Parkinson's disease (pd.tsv)
+Phenotype: Parkinsonism (HP:0001300)
+https://monarchinitiative.org/phenotype/HP:0001300
