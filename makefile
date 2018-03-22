@@ -76,7 +76,7 @@ clean_networks:
 # Kernels
 KERNEL_DIR := kernels
 KERNEL_CMD := java -Xmx24g -jar $(UBERJAR) kernel
-PF_KERNEL_OPTS := -t vonneumann -a 0.001
+PF_KERNEL_OPTS := -t vonneumann -a 0.000001
 STRING_KERNEL_OPTS := -t reglaplacian -a 0.0075
 STRINGNOTM_KERNEL_OPTS := -t reglaplacian -a 0.0075
 STRING_KERNEL := $(KERNEL_DIR)/string_kernel.mat
